@@ -18,13 +18,13 @@ class DiscoveryMission
   
   def launch
     until @queue.empty?
-      url = @queue.shift
-      response = land_on(url)
-      yield((@domain + url), response) if block_given?
+      path = @queue.shift
+      response = land_on(path)
+      yield(@domain+path, response) if block_given?
       explore(response.body)
-      @visited[url] = true
+      @explored << path
     end
-    all_paths = @visited.keys.map {|k| @domain + k.to_s}
+    all_paths = @explored.map {|k| @domain.host + k.to_s}
     reset
     all_paths
   end
@@ -32,21 +32,15 @@ class DiscoveryMission
   private
   
   def reset
-    @visited, @queue = {}, []
-    new_planet(@domain.path)
-  end
-
-  def new_planet(path)
-    @queue.push path
-    @visited[path] = false
+    @explored, @queue = [], [@domain.path]
   end
 
   def land_on(path)
     begin
-      url = @domain.clone
-      url.path = url.path + path unless path == "/"
-      puts "Landing on #{url}" if @verbose
-      response = Net::HTTP.get_response(url)
+      clone = @domain.clone
+      clone.path = clone.path + path unless path == "/"
+      puts "Landing on #{clone}" if @verbose
+      response = Net::HTTP.get_response(clone)
     rescue Exception
       puts "Error: #{$!}"
     end
@@ -55,9 +49,9 @@ class DiscoveryMission
 
   def explore(html)
     html.scan(/<a href\s*=\s*["']([^"']+)["']/i) do |w|
-      url = URI.parse("#{w}")
-      if !@visited.has_key?(url.path) and (url.relative? or url.host == @domain.host)
-        new_planet(url.path)
+      url_found = URI.parse("#{w}")
+      if !@explored.include?(url_found.path) and (url_found.relative? or url_found.host == @domain.host)
+        @queue << url_found.path
       end
     end
   end
