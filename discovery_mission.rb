@@ -3,11 +3,17 @@ require 'uri'
 
 class DiscoveryMission
   
-  def initialize(url)
-    @domain = URI.parse(url)
+  def self.for(domain, verbose=false, &block)
+    journey = new(domain, verbose)
+    journey.launch(&block)
+  end
+  
+  def initialize(domain, verbose=false)
+    @domain = URI.parse(domain)
     @domain.path = "/" if @domain.path == ""
+    @verbose = verbose
     reset
-    puts "Discovery Mission Planned for #{@domain}"
+    puts "Discovery Mission Planned for #{@domain}" if @verbose
   end
   
   def launch
@@ -18,7 +24,7 @@ class DiscoveryMission
       explore(response.body)
       @visited[url] = true
     end
-    all_paths = @visited.keys.map {|k| k.to_s}
+    all_paths = @visited.keys.map {|k| @domain + k.to_s}
     reset
     all_paths
   end
@@ -39,7 +45,7 @@ class DiscoveryMission
     begin
       url = @domain.clone
       url.path = url.path + path unless path == "/"
-      puts "Landing on #{url}"
+      puts "Landing on #{url}" if @verbose
       response = Net::HTTP.get_response(url)
     rescue Exception
       puts "Error: #{$!}"
