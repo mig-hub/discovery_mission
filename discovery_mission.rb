@@ -2,6 +2,7 @@ require 'net/http'
 require 'uri'
 
 class DiscoveryMission
+  
   def initialize(url)
     @domain = URI.parse(url)
     @domain.path = "/" if @domain.path == ""
@@ -13,8 +14,8 @@ class DiscoveryMission
     until @queue.empty?
       url = @queue.shift
       response = land_on(url)
-      yield((@domain + url), response)
-      explore(page)
+      yield((@domain + url), response) if block_given?
+      explore(response.body)
       @visited[url] = true
     end
     all_paths = @visited.keys.map {|k| k.to_s}
@@ -25,7 +26,7 @@ class DiscoveryMission
   private
   
   def reset
-    @visited, @queue = [], {}
+    @visited, @queue = {}, []
     new_planet(@domain.path)
   end
 
