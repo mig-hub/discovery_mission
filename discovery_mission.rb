@@ -3,44 +3,38 @@ require 'uri'
 
 class DiscoveryMission
   
-  def self.for(domain, verbose=false, &block)
-    journey = new(domain, verbose)
-    journey.launch(&block)
+  def self.for(domain, &block)
+    new(domain).launch(&block)
   end
   
-  def initialize(domain, verbose=false)
-    @domain = URI.parse(domain)
+  def initialize(domain)
+    @domain = URI(domain)
     @domain.path = "/" if @domain.path == ""
-    @verbose = verbose
     reset
-    puts "Discovery Mission Planned for #{@domain}" if @verbose
+    puts "Discovery Mission Planned for #{@domain}"
   end
   
   def launch
-    until @queue.empty?
-      path = @queue.shift
-      response = land_on(path)
-      yield(@domain+path, response) if block_given?
+    while destination = @roadmap.rassoc(false)
+      response = land_on(destination.first)
+      yield(destination, response) if block_given?
       explore(response.body)
-      @explored << path
+      @roadmap.assoc(destination.first)[1] = true
     end
-    all_paths = @explored.map {|k| @domain.host + k.to_s}
+    uri_list = @roadmap.flatten.delete_if {|d| d==true}
     reset
-    all_paths
+    uri_list
   end
 
   private
   
   def reset
-    @explored, @queue = [], [@domain.path]
+    @roadmap = [[@domain, false]]
   end
 
-  def land_on(path)
+  def land_on(destination)
     begin
-      clone = @domain.clone
-      clone.path = clone.path + path unless path == "/"
-      puts "Landing on #{clone}" if @verbose
-      response = Net::HTTP.get_response(clone)
+      response = Net::HTTP.get_response(destination.to_s)
     rescue Exception
       puts "Error: #{$!}"
     end
@@ -49,9 +43,12 @@ class DiscoveryMission
 
   def explore(html)
     html.scan(/<a href\s*=\s*["']([^"']+)["']/i) do |w|
-      url_found = URI.parse("#{w}")
-      if !@explored.include?(url_found.path) and (url_found.relative? or url_found.host == @domain.host)
-        @queue << url_found.path
+      url_found = URI("#{w}")
+      unless (url_found.absolute? and url_found.host!=@domain.host)
+        url_found.host = @domain.host if url_found.relative?
+        unless @roadmap.assoc(url_found)
+          @roadmap << [url_found, false]
+        end
       end
     end
   end
