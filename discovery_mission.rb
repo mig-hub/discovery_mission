@@ -15,13 +15,13 @@ class DiscoveryMission
   end
   
   def launch
-    while destination = @roadmap.rassoc(false)
+    while destination = @roadmap.find {|k,v| v==false}
       response = land_on(destination.first)
-      yield(destination, response) if block_given?
-      explore(response.body)
-      @roadmap.assoc(destination.first)[1] = true
+      yield(destination.first, response) if block_given?
+      explore(destination.first, response)
+      @roadmap[destination.first] = true
     end
-    uri_list = @roadmap.flatten.delete_if {|d| d==true}
+    uri_list = @roadmap.keys
     reset
     uri_list
   end
@@ -29,25 +29,26 @@ class DiscoveryMission
   private
   
   def reset
-    @roadmap = [[@domain, false]]
+    @roadmap = {@domain.path => false}
   end
 
   def land_on(destination)
     begin
-      response = Net::HTTP.get_response(destination.to_s)
+      response = Net::HTTP.get_response(@domain.host, destination)
     rescue Exception
       puts "Error: #{$!}"
     end
     return response
   end
 
-  def explore(html)
+  def explore(destination, response)
+    html = response.body
     html.scan(/<a href\s*=\s*["']([^"']+)["']/i) do |w|
-      url_found = URI("#{w}")
-      unless (url_found.absolute? and url_found.host!=@domain.host)
-        url_found.host = @domain.host if url_found.relative?
-        unless @roadmap.assoc(url_found)
-          @roadmap << [url_found, false]
+      uri_found = URI("#{w}") rescue nil
+      unless (uri_found.nil? or (uri_found.absolute? and uri_found.host!=@domain.host) or (uri_found.path=='' or uri_found.path=='#' or uri_found.path[/^javascript/]))
+        uri_found.path = destination + uri_found.path unless uri_found.path[/^\//]
+        unless @roadmap.key?(uri_found.path)
+          @roadmap.store(uri_found.path, false)
         end
       end
     end
