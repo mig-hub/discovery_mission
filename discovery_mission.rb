@@ -25,8 +25,6 @@ class DiscoveryMission
     reset
     uri_list
   end
-
-  private
   
   def reset
     @roadmap = {@domain.path => false}
@@ -46,6 +44,7 @@ class DiscoveryMission
     html.scan(/<a href\s*=\s*["']([^"']+)["']/i) do |w|
       uri_found = URI("#{w}") rescue nil
       unless (uri_found.nil? or (uri_found.absolute? and uri_found.host!=@domain.host) or (uri_found.path=='' or uri_found.path=='#' or uri_found.path[/^javascript/]))
+        destination += '/' unless destination[/\/$/]
         uri_found.path = destination + uri_found.path unless uri_found.path[/^\//]
         unless @roadmap.key?(uri_found.path)
           @roadmap.store(uri_found.path, false)
