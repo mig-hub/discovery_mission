@@ -11,7 +11,7 @@ class DiscoveryMission
     @domain = URI(domain)
     @domain.path = "/" if @domain.path == ""
     reset
-    puts "Discovery Mission Planned for #{@domain}"
+    puts "\nDiscovery Mission Planned for #{@domain}\nEverything is under control Dave\n\n"
   end
   
   def launch
