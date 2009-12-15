@@ -2,6 +2,7 @@ require 'net/http'
 require 'uri'
 
 class DiscoveryMission
+  attr_accessor :roadmap
   
   def self.for(domain, &block)
     new(domain).launch(&block)
