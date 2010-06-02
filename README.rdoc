@@ -28,4 +28,4 @@ my_sitemap_entries = DiscoveryMission.for("http://www.my-domain.com")
 
 -
 
-Copyright (c) 2009 - 2010 Mickael Riga. See MIT_LICENSE file for details.
+Copyright (c) 2009 - 2010 Mickael Riga. See MIT_LICENCE file for details.
